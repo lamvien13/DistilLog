@@ -1,0 +1,2 @@
+- these tools contain word2vec model
+- it read the template file (we get this template using log parser) to train the word2vec model then return sematic vector value for each template text 
