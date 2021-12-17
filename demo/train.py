@@ -7,25 +7,21 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader
 
-num_classes = 2
+num_classes = 1 
 num_epochs = 10
-batch_size = 100
-learning_rate = 0.1
+batch_size = 16
+learning_rate = 0.001
 input_size = 20
 sequence_length = 300
 hidden_size = 128
 num_layers = 2
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#
-'''
-    Step1:Dimensionality reduction of high-dimensional semantic vectors using PCA-PPA. 
-    This step reduces the dimensionality of the 300-dimensional semantic vector into 20-dimensional data.
-'''
+
 with open('../datasets/HDFS/hdfs_vector.json') as f:
-    # Step1-1 open file
     gdp_list = json.load(f)
     value = list(gdp_list.values())
+
 
     # Step1-2 PCA: Dimensionality reduction to 20-dimensional data
     from sklearn.decomposition import PCA
@@ -43,7 +39,8 @@ with open('../datasets/HDFS/hdfs_vector.json') as f:
             x = x - np.dot(u.transpose(), x) * u
         ppa_result.append(list(x))
     ppa_result = np.array(ppa_result)
-
+    #print(ppa_result.shape) (29,20)
+ 
 '''
     Step2: Read training data
 '''
@@ -62,14 +59,14 @@ def read_data(path,split = 0.7):
         padding = list(padding)
         logs.append(padding)
     logs = np.array(logs)
-    
+
     split_boundary = int(logs.shape[0] * split)
     train_x = logs[: split_boundary]
     valid_x = logs[split_boundary:]
     train_y = label[: split_boundary]
     valid_y = label[split_boundary:]
-    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 20))
-    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 20))
+    train_x = np.reshape(train_x, (train_x.shape[0], -1, 20))
+    valid_x = np.reshape(valid_x, (valid_x.shape[0], -1, 20))
     train_y = train_y.astype(int)
     valid_y = valid_y.astype(int)
 
@@ -78,17 +75,14 @@ def read_data(path,split = 0.7):
 train_path = '../datasets/HDFS/log_train.csv'
 train_x,train_y,valid_x,valid_y = read_data(train_path)
 
-#print(train_x.shape)  (N,300,20)
-#print(train_y.shape) (N,1)
-
 tensor_x = torch.Tensor(train_x) # transform to torch tensor
 tensor_y = torch.from_numpy(train_y)
-train_dataset = TensorDataset(tensor_x,tensor_y) # create your datset
+train_dataset = TensorDataset(tensor_x,tensor_y) # create your dataset
 train_loader = DataLoader(train_dataset) # create your dataloader
 
 tensor_valx = torch.Tensor(valid_x) # transform to torch tensor
 tensor_valy = torch.from_numpy(valid_y)
-test_dataset = TensorDataset(tensor_valx,tensor_valy) # create your datset
+test_dataset = TensorDataset(tensor_valx,tensor_valy) # create your dataset
 test_loader = DataLoader(test_dataset) # create your dataloader
 
 
@@ -109,19 +103,18 @@ class GRU(nn.Module):
         # x: (n, 300, 20), h0: (2, n, 128)
         
         # Forward propagate RNN
-        out, _ = self.gru(x, h0)  
-        
+        out, _ = self.gru(x, h0)      
         
         # out: tensor of shape (batch_size, seq_length, hidden_size)
         # Decode the hidden state of the last time step
         out = out[:, -1, :]
         out = self.fc(out)
-        return out
+        return out.view(out.size()[0])
 
 model = GRU(input_size, hidden_size, num_layers, num_classes).to(device)
 
 # Loss and optimizer
-criterion = nn.CrossEntropyLoss()
+criterion = nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  
 
 # Train the model
@@ -138,11 +131,13 @@ for epoch in range(num_epochs):
         # Backward and optimize
         optimizer.zero_grad()
         outputs = model(train_x)
-        loss = criterion(outputs, train_y)
+        train_y = train_y.type_as(outputs)
+        loss = criterion(outputs, train_y) #target = train_y
+       # print(outputs,train_y,loss)
         loss.backward()
         optimizer.step()
 
-        if (i+1) % 100 == 0:
+        if (i+1) % 500 == 0:
             print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
 
 # Test the model
