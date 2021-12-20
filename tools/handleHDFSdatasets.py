@@ -8,9 +8,6 @@ blk_label = pd.read_csv('./hdfs/anomaly_label.csv').values
 data = []
 label = []
 
-label_dict = {}
-for i in blk_label:
-    label_dict[i[0]] = (0, 1) if i[1] == 'Normal' else (1, 0)
 for i in range(0,len(pre_data)):
     value = ''
     division = pre_data[i][1].split(",")
@@ -27,11 +24,11 @@ for i in range(0,len(pre_data)):
     else:
         value += '0'
     data.append(value)
- 
-
-    label.append(str(pre_data[i][0]))
+    label.append(str(pre_data[i][0])) #label cho nay la blk_id
 
 HDFS_sequence = pd.DataFrame(columns=['sequence','label'])
 HDFS_sequence['sequence'] = data
 HDFS_sequence['label'] = label
+Blockid_label = pd.DataFrame(columns=['label','value'])
+Blockid_label['label'] = 
 HDFS_sequence.to_csv('hdfs_log_train.csv', index=False, header=False)

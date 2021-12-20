@@ -12,7 +12,7 @@ num_epochs = 10
 batch_size = 16
 learning_rate = 0.001
 input_size = 20
-sequence_length = 100 #anh Hoàng bảo để 100 thôi còn lúc đầu em để là 300
+sequence_length = 300 #anh Hoàng bảo để 100 thôi còn lúc đầu em để là 300
 hidden_size = 128
 num_layers = 2
 
@@ -51,7 +51,7 @@ def read_data(path,split = 0.7): #chinh split tuy anh chon data lon hay be
     logs_data = logs_series[:,0]
     logs = []
     for i in range(0,len(logs_data)):
-        padding = np.zeros((300,20))  
+        padding = np.zeros((sequence_length,20))  
         data = logs_data[i]
         data = [int(n) for n in data.split()]
         if len(data) > 100:
