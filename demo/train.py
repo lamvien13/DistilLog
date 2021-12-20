@@ -12,7 +12,7 @@ num_epochs = 10
 batch_size = 16
 learning_rate = 0.001
 input_size = 20
-sequence_length = 300
+sequence_length = 100 #anh Hoàng bảo để 100 thôi còn lúc đầu em để là 300
 hidden_size = 128
 num_layers = 2
 
@@ -44,7 +44,7 @@ with open('../datasets/HDFS/hdfs_vector.json') as f:
 '''
     Step2: Read training data
 '''
-def read_data(path,split = 0.7):
+def read_data(path,split = 0.7): #chinh split tuy anh chon data lon hay be
     logs_series = pd.read_csv(path)
     logs_series = logs_series.values
     label = logs_series[:,1]
@@ -54,6 +54,8 @@ def read_data(path,split = 0.7):
         padding = np.zeros((300,20))  
         data = logs_data[i]
         data = [int(n) for n in data.split()]
+        if len(data) > 100:
+            data = data[-100:]
         for j in range(0,len(data)):
             padding[j] = ppa_result[data[j]]
         padding = list(padding)
@@ -145,14 +147,17 @@ for epoch in range(num_epochs):
 with torch.no_grad():
     n_correct = 0
     n_samples = 0
+    model.eval()
     for log, label in test_loader:
-        log = log.reshape(-1, sequence_length, input_size).to(device)
+        #log = log.reshape(-1, sequence_length, input_size).to(device)
+        log = log.to(device)
         label = label.to(device)
+        #print(log, label)
         outputs = model(log)
-        # max returns (value ,index)
-        _, predicted = torch.max(outputs.data, 1)
+        label = label.type_as(outputs)
+       # print(outputs, label)
         n_samples += label.size(0)
-        n_correct += (predicted == label).sum().item()
+        n_correct += ((outputs > 0.5) == label).sum().item()
 
     acc = 100.0 * n_correct / n_samples
-    print(f'Accuracy of the network: {acc} %')
+    print(f'Accuracy of the network: {acc:.4f} %')
