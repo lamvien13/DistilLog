@@ -12,7 +12,7 @@ num_epochs = 10
 batch_size = 16
 learning_rate = 0.001
 input_size = 20
-sequence_length = 300 #anh Hoàng bảo để 100 thôi còn lúc đầu em để là 300
+sequence_length = 100 #anh Hoàng bảo để 100 thôi còn lúc đầu em để là 300
 hidden_size = 128
 num_layers = 2
 
