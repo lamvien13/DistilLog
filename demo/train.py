@@ -3,17 +3,16 @@ import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader
 
 num_classes = 2
-num_epochs = 60
+num_epochs = 10
 batch_size = 100
 learning_rate = 0.001
 input_size = 300
-sequence_length = 100
+sequence_length = 50
 hidden_size = 128
 num_layers = 2
 
@@ -34,11 +33,11 @@ def read_data(path):
     logs_data = logs_series[:,0]
     logs = []
     for i in range(0,len(logs_data)):
-        padding = np.full((100,300),-1)         
+        padding = np.full((50,300),-1)         
         data = logs_data[i]
         data = [int(n) for n in data.split()]
-        if len(data) > 100:
-          data = data[-100:]
+        if len(data) > 50:
+          data = data[-50:]
         for j in range(0,len(data)):
             padding[j] = vec[data[j]]
         padding = list(padding)
@@ -52,6 +51,7 @@ def read_data(path):
     return train_x, train_y
 
 train_path = '../datasets/HDFS/log_train.csv'
+save_path = '../datasets/HDFS/model.pth'
 train_x,train_y = read_data(train_path)
 
 tensor_x = torch.Tensor(train_x) # transform to torch tensor
@@ -111,43 +111,4 @@ for epoch in range(num_epochs):
 
         print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
 
-######
-#TEST#
-
-test_path = '../datasets/HDFS/log_test.csv'
-test_x, test_y = read_data(test_path)
-
-tensor_x = torch.Tensor(test_x) # transform to torch tensor
-tensor_y = torch.from_numpy(test_y)
-test_dataset = TensorDataset(tensor_x,tensor_y) # create your dataset
-test_loader = DataLoader(test_dataset, batch_size = batch_size) # create your dataloader
-
-
-# Test the model
-# In test phase, we don't need to compute gradients (for memory efficiency)
-with torch.no_grad():
-    n_correct = 0
-    n_samples = 0
-    TP = 0 
-    FP = 0
-    FN = 0 
-    TN = 0
-    for log, label in test_loader:
-        log = log.reshape(-1, sequence_length, input_size).to(device)
-        label = label.to(device)
-        outputs = model(log)
-        #print(outputs)
-        # max returns (value ,index)
-        outputs = F.sigmoid(outputs)[:, 0].cpu().detach().numpy()
-        predicted = (outputs < 0.2).astype(int)
-        label = np.array([y.cpu() for y in label])
-        #print(predicted, label)
-        TP += ((predicted == 1) * (label == 1)).sum()
-        FP += ((predicted == 1) * (label == 0)).sum()
-        FN += ((predicted == 0) * (label == 1)).sum()
-        TN += ((predicted == 0) * (label == 0)).sum()
-    P = 100 * TP / (TP + FP)
-    R = 100 * TP / (TP + FN)
-    F1 = 2 * P * R / (P + R)
-    print('false positive (FP): {}, false negative (FN): {}, Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%'
-            .format(FP, FN, P, R, F1))
+torch.save(model.state_dict(), save_path)
