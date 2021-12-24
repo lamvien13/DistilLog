@@ -119,7 +119,7 @@ with torch.no_grad():
     FP = 0
     FN = 0 
     TN = 0
-    for i in range(5):
+    for i in range(50):
         test_x, test_y = read_data(test_path, i)
         test_loader = load_data(test_x, test_y)
         tbar = tqdm(test_loader, desc="\r")
