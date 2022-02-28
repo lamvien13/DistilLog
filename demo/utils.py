@@ -12,27 +12,24 @@ from tqdm import tqdm
 import torch.nn.utils.prune as prune
 import torch.nn.functional as F
 import math
+import csv
 from time import time 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
-        super(LSTM, self).__init__()
-        self.num_layers = num_layers
-        self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, dropout = 0.5, batch_first=True)
-        #fully connected layer
-        self.fc = nn.Linear(hidden_size, num_classes)
+      super(LSTM, self).__init__()
+      self.num_layers = num_layers
+      self.hidden_size = hidden_size
+      self.lstm = nn.LSTM(input_size, hidden_size, num_layers, dropout = 0.1, batch_first=True)
+      self.fc = nn.Linear(hidden_size, num_classes)
         
     def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-
-        out, _ = self.lstm(x, (h0,c0))      
-        out = out[:, -1, :]
-        out = self.fc(out)
-        return out
+      out, _ = self.lstm1(x)
+      out = out[:, -1, :]
+      out = self.fc(out)
+      return out
 
 
 def load_model(model, save_path):
@@ -43,12 +40,10 @@ def save_model(model, save_path):
     torch.save(model.state_dict(), save_path)
 
 def read_data(path, sequence_length):
-    with open('../datasets/HDFS/hdfs_vector.json') as f:
-        gdp_list = json.load(f)
-        value = list(gdp_list.values())
-        vec = []
-        for i in range(0, len(value)): 
-            vec.append(value[i])
+    fi = pd.read_csv('../datasets/HDFS/vector.csv')
+    vec = []
+    vec = fi
+    vec = np.array(vec)
 
     logs_series = pd.read_csv(path)
     logs_series = logs_series.values
@@ -74,17 +69,16 @@ def read_data(path, sequence_length):
     return train_x, train_y
 
 def load_data(train_x, train_y, batch_size):
-    tensor_x = torch.Tensor(train_x) # transform to torch tensor
+    tensor_x = torch.Tensor(train_x) 
     tensor_y = torch.from_numpy(train_y)
-    train_dataset = TensorDataset(tensor_x,tensor_y) # create your dataset
-    train_loader = DataLoader(train_dataset, batch_size = batch_size) # create your dataloader
+    train_dataset = TensorDataset(tensor_x,tensor_y) 
+    train_loader = DataLoader(train_dataset, batch_size = batch_size) 
     return train_loader
 
 
 
 def train(model, train_loader, learning_rate, num_epochs):
     l1_regularization_strength = 0
-    l2_regularization_strength = 0.00001
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.0001)  
     model.train()
@@ -96,10 +90,8 @@ def train(model, train_loader, learning_rate, num_epochs):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
-            #print(output, target)
             loss = criterion(output, target)
             total_loss += loss 
-            #loss = F.nll_loss(output, target)
 
             l1_reg = torch.tensor(0.).to(device)
             for module in model.modules():
@@ -115,13 +107,15 @@ def train(model, train_loader, learning_rate, num_epochs):
                 l1_reg += torch.norm(mask*weight, 1)
             
             total_loss += l1_regularization_strength * l1_reg
-            #loss = F.nll_loss(output, target)
             loss.backward()          
             optimizer.step()
 
             if batch_idx % 10 == 0:
                 done = (batch_idx+1) * len(data)
                 percentage = 100. * batch_idx / len(train_loader)
-                pbar.set_description(f'Train Epoch: {epoch+1} [{done:5}/{len(train_loader.dataset)} ({percentage:3.0f}%)]  Loss: {total_loss:.6f}')
+                pbar.set_description(f'Train Epoch: {epoch+1}/{num_epochs} [{done:5}/{len(train_loader.dataset)} ({percentage:3.0f}%)]  Loss: {total_loss:.6f}')
+        if total_loss < 65:
+              break
+
     return model
 

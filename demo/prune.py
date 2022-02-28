@@ -15,10 +15,10 @@ from time import time
 from utils import LSTM, read_data, load_data, train, save_model, load_model 
 
 num_classes = 2
-num_epochs = 5
-batch_size = 100
-learning_rate = 0.01
-input_size = 300
+num_epochs = 30
+batch_size = 64
+learning_rate = 0.05
+input_size = 30
 sequence_length = 50
 hidden_size = 128
 num_layers = 2
@@ -28,13 +28,8 @@ train_path = '../datasets/HDFS/log_train.csv'
 save_path = '../datasets/HDFS/model.h5'
 test_path = '../datasets/HDFS/500log_test.csv'
 
-with open('../datasets/HDFS/hdfs_vector.json') as f:
-    gdp_list = json.load(f)
-    value = list(gdp_list.values())
-    vec = []
-    for i in range(0, len(value)): 
-        vec.append(value[i])
-
+fi = pd.read_csv('../datasets//HDFS/pca_vector.csv')
+vec = fi.values()
 logs_series = pd.read_csv(test_path)
 logs_series = logs_series.values
 total = len(logs_series)
@@ -204,9 +199,9 @@ def main():
     pruned_model = copy.deepcopy(model)
 
     iterative_pruning_finetuning(pruned_model, train_loader, learning_rate, num_epochs, save_path,
-                                 lstm_prune_amount = 0.03,
-                                 linear_prune_amount = 0.03,
-                                 num_iter = 5)
+                                 lstm_prune_amount = 0.05,
+                                 linear_prune_amount = 0.05,
+                                 num_iter = 15)
     remove_parameters(pruned_model)
 
     print("Finished Prunning")
