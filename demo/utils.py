@@ -26,7 +26,7 @@ class LSTM(nn.Module):
       self.fc = nn.Linear(hidden_size, num_classes)
         
     def forward(self, x):
-      out, _ = self.lstm1(x)
+      out, _ = self.lstm(x)
       out = out[:, -1, :]
       out = self.fc(out)
       return out
