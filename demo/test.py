@@ -16,7 +16,7 @@ from utils import logIoT, load_data, load_model
 
 
 batch_size = 50
-input_size = 30
+input_size = 20
 sequence_length = 50
 hidden_size = 128
 num_layers = 2
@@ -83,7 +83,6 @@ def test(model, criterion = nn.CrossEntropyLoss()):
         FN = 0 
         TN = 0
         for i in range (0, split):        #################################################
-            print(f'batch {i+1}/{split}')
             test_x, test_y = load_test(i)
             test_loader = load_data(test_x, test_y, batch_size)            
             for data, target in test_loader:
@@ -94,7 +93,7 @@ def test(model, criterion = nn.CrossEntropyLoss()):
                 output = torch.sigmoid(output)[:, 0].cpu().detach().numpy()
                 predicted = (output < 0.2).astype(int)
                 target = np.array([y.cpu() for y in target])
-                #print(predicted, label)
+
                 TP += ((predicted == 1) * (target == 1)).sum()
                 FP += ((predicted == 1) * (target == 0)).sum()
                 FN += ((predicted == 0) * (target == 1)).sum()

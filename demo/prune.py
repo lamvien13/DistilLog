@@ -20,7 +20,7 @@ num_classes = 2
 num_epochs = 30
 batch_size = 50
 learning_rate = 0.0001
-input_size = 30
+input_size = 20
 sequence_length = 50
 hidden_size = 128
 num_layers = 2
@@ -102,6 +102,7 @@ def iterative_pruning_finetuning(model, train_loader, learning_rate, num_epochs,
             print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {accuracy:.2f}%). Total time = {time() - start_time}')
             print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%'
                         .format(P, R, F1))
+            print_nonzeros(model)
         
 
     return model
@@ -146,7 +147,7 @@ def main():
 
     model = logIoT(input_size, hidden_size, num_layers, num_classes).to(device)
     model = load_model(model, save_path)
-    summary(model, input_size=(50, 50, 30))
+    summary(model, input_size=(50, 50, 20))
 
     print("Iterative Pruning + Fine-Tuning...")
     pruned_model = copy.deepcopy(model)
@@ -154,7 +155,7 @@ def main():
     iterative_pruning_finetuning(pruned_model, train_loader, learning_rate, num_epochs, save_path,
                                  lstm_prune_amount = 0.05,
                                  linear_prune_amount = 0.05,
-                                 num_iterations = 60)
+                                 num_iterations = 70)
     remove_parameters(pruned_model)
 
     print("Finished Prunning")
@@ -172,7 +173,7 @@ def main():
                 .format(P, R, F1))
     save_model(pruned_model, save_prune_path)
     print_nonzeros(pruned_model)
-    #summary(pruned_model, input_size=(50, 50, 30))
+
 
 
 if __name__ == "__main__":

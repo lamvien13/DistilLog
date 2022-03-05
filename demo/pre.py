@@ -22,8 +22,8 @@ def main():
     num_classes = 2
     num_epochs = 60
     batch_size = 50
-    learning_rate = 0.0001
-    input_size = 30
+    learning_rate = 0.001
+    input_size = 20
     sequence_length = 50
     hidden_size = 128
     num_layers = 2
