@@ -14,19 +14,20 @@ import torch.nn.functional as F
 import math
 import csv
 from time import time 
+#from torchinfo import summary
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-class LSTM(nn.Module):
+class logIoT(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
-      super(LSTM, self).__init__()
+      super(logIoT, self).__init__()
       self.num_layers = num_layers
       self.hidden_size = hidden_size
-      self.lstm = nn.LSTM(input_size, hidden_size, num_layers, dropout = 0.1, batch_first=True)
+      self.gru = nn.GRU(input_size, hidden_size, num_layers, dropout = 0.1, batch_first=True)
       self.fc = nn.Linear(hidden_size, num_classes)
         
     def forward(self, x):
-      out, _ = self.lstm(x)
+      out, _ = self.gru(x)
       out = out[:, -1, :]
       out = self.fc(out)
       return out
@@ -39,31 +40,40 @@ def load_model(model, save_path):
 def save_model(model, save_path):
     torch.save(model.state_dict(), save_path)
 
-def read_data(path, sequence_length):
-    fi = pd.read_csv('../datasets/HDFS/vector.csv')
+def mod(l, n):
+    """ Truncate or pad a list """
+    r = l[-1*n:]
+    if len(r) < n:
+        r.extend(list([0]) * (n - len(r)))
+    return r
+
+def read_data(path, input_size, sequence_length):
+    fi = pd.read_csv('../datasets/HDFS/pca_vector.csv')
     vec = []
     vec = fi
     vec = np.array(vec)
-
+    
     logs_series = pd.read_csv(path)
     logs_series = logs_series.values
     label = logs_series[:,1]
     logs_data = logs_series[:,0]
     logs = []
     for i in range(0,len(logs_data)):
-        padding = np.full((sequence_length,300),-1)         
-        data = logs_data[i]
-        data = [int(n) for n in data.split()]
-        if len(data) > sequence_length:
-          data = data[-1*sequence_length:]
-        for j in range(0,len(data)):
-            padding[j] = vec[data[j]-1]
-        padding = list(padding)
-        logs.append(padding)
+      ori_seq = [
+          int(eventid) for eventid in logs_data[i].split()]
+      seq_pattern = mod(ori_seq, sequence_length)
+      vec_pattern = []
+
+      for event in seq_pattern:
+        if event == 0:
+          vec_pattern.append([-1]*input_size)
+        else:
+          vec_pattern.append(vec[event-1])  
+      logs.append(vec_pattern)
     logs = np.array(logs)
     train_x = logs
     train_y = np.array(label)
-    train_x = np.reshape(train_x, (train_x.shape[0], -1, 300))
+    train_x = np.reshape(train_x, (train_x.shape[0], -1, input_size))
     train_y = train_y.astype(int)
 
     return train_x, train_y
@@ -91,7 +101,7 @@ def train(model, train_loader, learning_rate, num_epochs):
             optimizer.zero_grad()
             output = model(data)
             loss = criterion(output, target)
-            total_loss += loss 
+            total_loss += loss.item() 
 
             l1_reg = torch.tensor(0.).to(device)
             for module in model.modules():
@@ -114,8 +124,6 @@ def train(model, train_loader, learning_rate, num_epochs):
                 done = (batch_idx+1) * len(data)
                 percentage = 100. * batch_idx / len(train_loader)
                 pbar.set_description(f'Train Epoch: {epoch+1}/{num_epochs} [{done:5}/{len(train_loader.dataset)} ({percentage:3.0f}%)]  Loss: {total_loss:.6f}')
-        if total_loss < 65:
-              break
 
     return model
 

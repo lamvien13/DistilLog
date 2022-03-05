@@ -12,17 +12,18 @@ from tqdm import tqdm
 import torch.nn.utils.prune as prune
 import torch.nn.functional as F
 import math
+#from torchinfo import summary 
 from time import time 
-from utils import LSTM, train, save_model, read_data, load_data
+from utils import logIoT, train, save_model, read_data, load_data
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def main():
     num_classes = 2
-    num_epochs = 50
+    num_epochs = 60
     batch_size = 50
-    learning_rate = 0.01
-    input_size = 300
+    learning_rate = 0.0001
+    input_size = 30
     sequence_length = 50
     hidden_size = 128
     num_layers = 2
@@ -32,9 +33,9 @@ def main():
     torch.manual_seed(seed)
 
     
-    train_x, train_y = read_data(train_path, sequence_length)
+    train_x, train_y = read_data(train_path, input_size, sequence_length)
     train_loader = load_data(train_x, train_y, batch_size)
-    model = LSTM(input_size, hidden_size, num_layers, num_classes).to(device)
+    model = logIoT(input_size, hidden_size, num_layers, num_classes).to(device)
     
     # Train the model
     print(f'Initially training model with learning rate = {learning_rate}')
