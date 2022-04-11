@@ -118,7 +118,7 @@ def train(model, train_loader, learning_rate, num_epochs):
     criterion = nn.CrossEntropyLoss()
     summary(model, input_size=(50, 50, 30))
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.0001)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)  
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.75)  
     model.train()
     
     for epoch in range(num_epochs):
@@ -132,7 +132,6 @@ def train(model, train_loader, learning_rate, num_epochs):
             total_loss += loss.item() 
             loss.backward()   
             optimizer.step()
-            scheduler.step()
 
             if total_loss < min_loss:
                 min_loss = total_loss
@@ -142,6 +141,7 @@ def train(model, train_loader, learning_rate, num_epochs):
                 done = (batch_idx+1) * len(data)
                 percentage = 100. * batch_idx / len(train_loader)
                 pbar.set_description(f'Train Epoch: {epoch+1}/{num_epochs} [{done:5}/{len(train_loader.dataset)} ({percentage:3.0f}%)]  Loss: {total_loss:.6f}')
+        scheduler.step()
 
     return model
 

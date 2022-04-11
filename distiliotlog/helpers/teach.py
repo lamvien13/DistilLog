@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import math
 from time import time 
 
-from utils import DistilLog,read_data, load_data, load_model, save_model
+from utils import DistilLog, read_data, load_data, load_model, save_model
 
 num_classes = 2
 num_epochs = 100
@@ -23,7 +23,7 @@ sequence_length = 50
 num_layers = 2
 hidden_size = 6
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_path = ('../datasets/BGL/log_train.csv')
+train_path = ('../datasets/BGL/new_train.csv')
 save_teacher_path = ('../datasets/BGL/model/teacher_model.pth')
 save_student_path = ('../datasets/BGL/model/student_model.pth')
 
@@ -100,5 +100,5 @@ Teacher = DistilLog(input_size = input_size, hidden_size=128, num_layers = num_l
 Student = DistilLog(input_size = input_size, hidden_size=6, num_layers = num_layers, num_classes = num_classes).to(device)
 
 Teacher = load_model(Teacher, save_teacher_path)
-teach(epochs=10, Teacher=Teacher, Student=Student, temp=7, alpha=0.3)
+teach(epochs=100, Teacher=Teacher, Student=Student, temp=7, alpha=0.3)
 save_model(Student, save_student_path)
