@@ -13,7 +13,6 @@ import math
 import csv
 from time import time 
 from torchinfo import summary
-#from model.distillog import DistilLog
 from utils import save_model, train, read_data, load_data
 from utils import DistilLog
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -26,9 +25,9 @@ input_size = 30
 sequence_length = 50
 num_layers = 2
 
-train_path = '../datasets/HDFS/log_train.csv'
-save_teacher_path = '../datasets/HDFS/teacher_model.pth'
-save_student_path = '../datasets/HDFS/student_model.pth'
+train_path = '../datasets/BGL/new_train.csv'
+save_teacher_path = '../datasets/BGL/model/teacher_model.pth'
+save_student_path = '../datasets/BGL/model/student_model.pth'
 
 Teacher = DistilLog(input_size, hidden_size, num_layers, num_classes).to(device)
 #summary(Teacher, input_size=(50, 50, 30))
@@ -36,5 +35,5 @@ Teacher = DistilLog(input_size, hidden_size, num_layers, num_classes).to(device)
 train_x, train_y = read_data(train_path, input_size, sequence_length)
 train_loader = load_data(train_x, train_y, batch_size)
 
-Teacher = train(Teacher, train_loader, learning_rate, num_epochs = 40)
+Teacher = train(Teacher, train_loader, learning_rate, num_epochs = 200)
 save_model(Teacher, save_teacher_path)

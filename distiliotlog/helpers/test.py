@@ -22,12 +22,12 @@ num_layers = 2
 num_classes = 2 
 split = 50
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-save_teacher_path = '../datasets/HDFS/teacher_model.pth'
-save_student_path = '../datasets/HDFS/student_model.pth'
-save_noKD_path = '../datasets/HDFS/noKD_model.pth'
-test_path = '../datasets/HDFS/500log_test.csv'
+save_teacher_path = '../datasets/BGL/model/teacher_model.pth'
+save_student_path = '../datasets/BGL/model/student_model.pth'
+save_noKD_path = '../datasets/BGL/model/noKD_model.pth'
+test_path = '../datasets/BGL/new_test.csv'
 
-fi = pd.read_csv('../datasets/HDFS/pca_vector.csv')
+fi = pd.read_csv('../datasets/BGL/pca_vector.csv')
 vec = []
 vec = fi
 vec = np.array(vec)
@@ -87,7 +87,7 @@ def test(model, criterion = nn.CrossEntropyLoss()):
             test_loader = load_data(test_x, test_y, batch_size)            
             for data, target in test_loader:
                 data, target = data.to(device), target.to(device)
-                output = model(data)
+                output, _ = model(data)
                 test_loss += criterion(output, target) # sum up batch loss
                 
                 output = torch.sigmoid(output)[:, 0].cpu().detach().numpy()
@@ -101,8 +101,9 @@ def test(model, criterion = nn.CrossEntropyLoss()):
         P = 100 * TP / (TP + FP)
         R = 100 * TP / (TP + FN)
         F1 = 2 * P * R / (P + R)   
-        accuracy = 100 * (TP + TN)/(TP + TN + FP + FN)        
-    return accuracy, test_loss, P, R, F1, TP, FP, TN, FN
+        accuracy = 100 * (TP + TN)/(TP + TN + FP + FN)
+        MCC = 100*(TP*TN + FP*FN)/math.sqrt((TP+FP)*(TN+FN)*(TN+FP)*(TP+FN))         
+    return accuracy, test_loss, P, R, F1, TP, FP, TN, FN, MCC
 
 def main():      
 
@@ -114,34 +115,31 @@ def main():
     noKD = load_model(noKD, save_student_path)
 
     start_time = time()
-    accuracy, test_loss, P, R, F1, TP, FP, TN, FN = test(teacher, criterion = nn.CrossEntropyLoss())
+    accuracy, test_loss, P, R, F1, TP, FP, TN, FN, MCC = test(teacher, criterion = nn.CrossEntropyLoss())
     test_loss /= (split*sub)
 
     print('Result of testing teacher model')
     print('false positive (FP): {}, false negative (FN): {}, true positive (TP): {}, true negative (TN): {}'.format(FP, FN, TP, TN))
     print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {accuracy:.2f}%). Total time = {time() - start_time}')
-    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%'
-                .format(P, R, F1))
+    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%, MCC: {:.3f}%'.format(P, R, F1, MCC))
 
     start_time = time()
-    accuracy, test_loss, P, R, F1, TP, FP, TN, FN = test(student, criterion = nn.CrossEntropyLoss())
+    accuracy, test_loss, P, R, F1, TP, FP, TN, FN, MCC = test(student, criterion = nn.CrossEntropyLoss())
     test_loss /= (split*sub)
 
     print('Result of testing student model')
     print('false positive (FP): {}, false negative (FN): {}, true positive (TP): {}, true negative (TN): {}'.format(FP, FN, TP, TN))
     print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {accuracy:.2f}%). Total time = {time() - start_time}')
-    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%'
-                .format(P, R, F1))
+    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%, MCC: {:.3f}%'.format(P, R, F1, MCC))
 
     start_time = time()
-    accuracy, test_loss, P, R, F1, TP, FP, TN, FN = test(noKD, criterion = nn.CrossEntropyLoss())
+    accuracy, test_loss, P, R, F1, TP, FP, TN, FN, MCC = test(noKD, criterion = nn.CrossEntropyLoss())
     test_loss /= (split*sub)
 
     print('Result of testing no KD student model')
     print('false positive (FP): {}, false negative (FN): {}, true positive (TP): {}, true negative (TN): {}'.format(FP, FN, TP, TN))
     print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {accuracy:.2f}%). Total time = {time() - start_time}')
-    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%'
-                .format(P, R, F1))
+    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%, MCC: {:.3f}%'.format(P, R, F1, MCC))
  
 if __name__ == "__main__":
 

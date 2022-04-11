@@ -23,9 +23,9 @@ sequence_length = 50
 num_layers = 2
 hidden_size = 6
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_path = ('../datasets/HDFS/log_train.csv')
-save_teacher_path = ('../datasets/HDFS/teacher_model.pth')
-save_student_path = ('../datasets/HDFS/student_model.pth')
+train_path = ('../datasets/BGL/log_train.csv')
+save_teacher_path = ('../datasets/BGL/model/teacher_model.pth')
+save_student_path = ('../datasets/BGL/model/student_model.pth')
 
 train_x, train_y = read_data(train_path, input_size, sequence_length)
 train_loader = load_data(train_x, train_y, batch_size)
@@ -51,9 +51,9 @@ def train_step(
 
         # forward
         with torch.no_grad():
-            teacher_preds = Teacher(data)
+            teacher_preds, _ = Teacher(data)
 
-        student_preds = Student(data)
+        student_preds, __ = Student(data)
         student_loss = student_loss_fn(student_preds, targets)
         
         ditillation_loss = divergence_loss_fn(

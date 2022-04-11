@@ -7,26 +7,57 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader
 from torch.nn.modules.module import Module
+from torchinfo import summary
 from tqdm import tqdm
 import csv
 from time import time
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+
+class Attention(nn.Module):
+    def __init__(self, hidden_size):
+        super(Attention, self).__init__()
+        
+        #self.device = device
+        self.hidden_size = hidden_size
+        self.concat_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
+        self.attn = nn.Linear(self.hidden_size, hidden_size)
+
+    def forward(self, gru_output, final_hidden_state):
+        batch_size, sequence_length, _ = gru_output.shape
+        attn_weights = self.attn(gru_output) # (batch_size, seq_len, hidden_dim)
+        attn_weights = torch.bmm(attn_weights, final_hidden_state.unsqueeze(2))     
+        attn_weights = F.softmax(attn_weights.squeeze(2), dim=1)
+        context = torch.bmm(gru_output.transpose(1, 2), attn_weights.unsqueeze(2)).squeeze(2)
+        attn_hidden = torch.tanh(self.concat_linear(torch.cat((context, final_hidden_state), dim=1)))
+        return attn_hidden, attn_weights
+
+
 class DistilLog(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
         super(DistilLog, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        self.gru = nn.GRU(input_size, hidden_size, num_layers, dropout = 0.1, batch_first=True)
-        self.fc = nn.Linear(hidden_size, num_classes)
-        
-    def forward(self, x):
-        out, _ = self.gru(x)
-        out = out[:, -1, :]
-        out = self.fc(out)
-        return out
+        self.gru = nn.GRU(input_size, hidden_size, num_layers, dropout = 0.1, batch_first = True)
+        self.attn = Attention(self.hidden_size)
+        self.fc = nn.Linear(hidden_size, num_classes)     
 
+    def forward(self, x):
+        batch_size, sequence_length, _ = x.shape
+        gru_output, self.hidden = self.gru(x)
+        #get last hidden state
+        final_state = self.hidden.view(self.num_layers, batch_size, self.hidden_size)[-1]
+        final_hidden_state = None
+        final_hidden_state = final_state.squeeze(0)
+
+        #push through attention layer
+        attn_weights = None
+        #gru_output = gru_output.permute(1, 0, 2)  #
+        x, attn_weights = self.attn(gru_output, final_hidden_state)
+        x = self.fc(x)
+
+        return x, attn_weights
 
 def load_model(model, save_path):
     model.load_state_dict(torch.load(save_path))
@@ -43,7 +74,7 @@ def mod(l, n):
     return r
 
 def read_data(path, input_size, sequence_length):
-    fi = pd.read_csv('../datasets/HDFS/pca_vector.csv')
+    fi = pd.read_csv('../datasets/BGL/pca_vector.csv')
     vec = []
     vec = fi
     vec = np.array(vec)
@@ -83,9 +114,11 @@ def load_data(train_x, train_y, batch_size):
 
 
 def train(model, train_loader, learning_rate, num_epochs):
-    l1_regularization_strength = 0
+    min_loss = 100
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.0001)  
+    summary(model, input_size=(50, 50, 30))
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.0001)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)  
     model.train()
     
     for epoch in range(num_epochs):
@@ -94,13 +127,18 @@ def train(model, train_loader, learning_rate, num_epochs):
         for batch_idx, (data, target) in pbar:
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
-            output = model(data)
+            output, _ = model(data)
             loss = criterion(output, target)
             total_loss += loss.item() 
-            loss.backward()          
+            loss.backward()   
             optimizer.step()
+            scheduler.step()
 
-            if batch_idx % 10 == 0:
+            if total_loss < min_loss:
+                min_loss = total_loss
+                save_model(model,'../datasets/BGL/model/teacher.pth')
+            
+            if (batch_idx+1) % 10 == 0:
                 done = (batch_idx+1) * len(data)
                 percentage = 100. * batch_idx / len(train_loader)
                 pbar.set_description(f'Train Epoch: {epoch+1}/{num_epochs} [{done:5}/{len(train_loader.dataset)} ({percentage:3.0f}%)]  Loss: {total_loss:.6f}')
