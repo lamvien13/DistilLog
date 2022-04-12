@@ -135,3 +135,5 @@ datasets/*.log
 datasets/*/*.log
 datasets/**.log
 datasets/**/**.log
+*.xml
+*.iml
