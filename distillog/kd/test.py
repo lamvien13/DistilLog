@@ -6,11 +6,12 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader
-from tqdm import tqdm
+from tqdm import tqdm 
+import torch.quantization
 import math
 import copy
 from time import time 
-from utils import load_data, load_model, DistilLog 
+from utils import load_data, load_model, DistilLog, save_model 
 
 
 
@@ -21,11 +22,12 @@ hidden_size = 128
 num_layers = 2
 num_classes = 2 
 split = 50
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 save_teacher_path = '../datasets/HDFS/model/teacher.pth'
 save_student_path = '../datasets/HDFS/model/student.pth'
 save_noKD_path = '../datasets/HDFS/model/noKD.pth'
 test_path = '../datasets/HDFS/test.csv'
+save_quantized_path = '../datasets/HDFS/model/quantized_model.pth'
 
 fi = pd.read_csv('../datasets/HDFS/pca_vector.csv', header = None)
 vec = []
@@ -136,10 +138,27 @@ def main():
     accuracy, test_loss, P, R, F1, TP, FP, TN, FN = test(noKD, criterion = nn.CrossEntropyLoss())
     test_loss /= (split*sub)
 
-    print('Result of testing no KD student model')
+    print('Result of testing noKD model')
     print('false positive (FP): {}, false negative (FN): {}, true positive (TP): {}, true negative (TN): {}'.format(FP, FN, TP, TN))
     print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {accuracy:.2f}%). Total time = {time() - start_time}')
     print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%' .format(P, R, F1))
+
+
+
+    encoder = copy.deepcopy(teacher)
+    quantized_model = torch.quantization.quantize_dynamic(encoder, {nn.GRU, nn.Linear}, dtype=torch.qint8)
+
+    save_model(quantized_model, save_quantized_path)
+
+    start_time = time()
+    accuracy, test_loss, P, R, F1, TP, FP, TN, FN = test(quantized_model, criterion = nn.CrossEntropyLoss())
+    test_loss /= (split*sub)
+
+    print('Result of testing quantized model')
+    print('false positive (FP): {}, false negative (FN): {}, true positive (TP): {}, true negative (TN): {}'.format(FP, FN, TP, TN))
+    print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {accuracy:.2f}%). Total time = {time() - start_time}')
+    print('Precision: {:.3f}%, Recall: {:.3f}%, F1-measure: {:.3f}%' .format(P, R, F1))
+
  
 if __name__ == "__main__":
 

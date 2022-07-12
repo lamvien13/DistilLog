@@ -32,7 +32,7 @@ See [notebook](demo/DistilLog.ipynb)
 ## Data and Models
 Datasets: [Data](https://zenodo.org/record/3227177)
 
-Pre-trained models can be found here: [HDFSmodel] (distillog/datasets/HDFS/model) or [BGLmodel] (distillog/datasets/BGL/model)
+Pre-trained models can be found here: [HDFSmodel] (distillog/datasets/HDFS/model.zip) or [BGLmodel] (distillog/datasets/BGL/model.zip)
 ## Results
 
 Comparison with different model compression techniques (result of testing on CPU)

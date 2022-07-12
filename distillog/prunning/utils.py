@@ -15,7 +15,7 @@ from time import time
 from torch.nn import functional as F
 from attention_layers import LinearAttention
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
 
 class DistilLog(nn.Module):
@@ -73,7 +73,7 @@ class DistilLog(nn.Module):
 
 
 def load_model(model, save_path):
-    model.load_state_dict(torch.load(save_path))
+    model.load_state_dict(torch.load(save_path, map_location='cpu'))
     return model
 
 

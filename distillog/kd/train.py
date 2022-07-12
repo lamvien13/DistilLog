@@ -37,6 +37,6 @@ train_x, train_y = read_data(train_path, input_size, sequence_length)
 train_loader = load_data(train_x, train_y, batch_size)
 
 Teacher = train(Teacher, train_loader, learning_rate, num_epochs = 300)
-noKD = train(noKD, train_loader, learning_rate, num_epochs = 400)
+noKD = train(noKD, train_loader, learning_rate, num_epochs = 300)
 save_model(Teacher, save_teacher_path)
 save_model(noKD, save_noKD_path)
